@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="A personal rotary link directory.">
+  <title>Your Name · Rotary Directory</title>
+  <style>
+    :root { color-scheme: light; --paper:#f8f7f3; --ink:#171817; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font-family:Arial,sans-serif; }
+    main { width:min(100%,680px); margin:auto; padding:40px 20px 50px; }
+    .dial { width:100%; aspect-ratio:1; position:relative; isolation:isolate; overflow:clip; overflow-clip-margin:12px; margin-bottom:34px; }
+    .mechanism { position:absolute; inset:0; border-radius:50%; background:conic-gradient(from 15deg,#777f83,#f1f3f3 14%,#99a0a5 25%,#fff 37%,#a0a3a3 50%,#555d61 65%,#e1e4e5 83%,#777f83); border:2px solid #d4d8d9; box-shadow:inset 0 0 0 3px #676c6d,inset 0 0 14px #fff,0 9px 18px #0002; }
+    .connection { position:absolute; left:var(--x); top:var(--y); width:16%; aspect-ratio:1; min-width:44px; min-height:44px; border-radius:50%; transform:translate(-50%,-50%); display:grid; place-items:center; color:var(--accent); background:radial-gradient(circle at 36% 29%,#fff 3%,#f3f1e9 67%,#c4c6c2 87%); border:1px solid #3e4447; box-shadow:0 0 0 2px #f5f6f5,0 0 0 4px #7a8286,inset 2px 3px 5px #0004; text-decoration:none; font-weight:700; font-size:clamp(15px,4.5vw,29px); -webkit-tap-highlight-color:transparent; }
+    .connection img { width:55%; height:55%; object-fit:contain; }
+    .connection[aria-disabled] { cursor:default; }
+    .connection.is-selected { outline:3px solid var(--accent); outline-offset:5px; }
+    a:focus-visible, button:focus-visible { outline:3px solid #216dca; outline-offset:6px; }
+    .center { position:absolute; inset:27%; border-radius:50%; background:radial-gradient(circle at 35% 20%,#faf5df,#e3ddc1); border:3px solid #e8ebeb; box-shadow:0 0 0 3px #6b7172,0 0 0 6px #f1f4f4,0 4px 6px 7px #0006,inset 0 0 9px #393f3d77; pointer-events:none; }
+    .arch { position:absolute; inset:0; width:100%; height:100%; font:700 11px Arial,sans-serif; letter-spacing:1.2px; fill:var(--ink); }
+    h1 { position:absolute; inset:26% 6% 12%; margin:0; display:flex; flex-direction:column; justify-content:center; align-items:center; font-family:Georgia,serif; font-style:italic; font-size:clamp(19px,5.5vw,38px); line-height:.98; text-align:center; }
+    .stop { position:absolute; left:87%; top:55%; width:9%; height:19%; border-radius:55% 25% 15% 15%; transform:rotate(-30deg); background:linear-gradient(92deg,#3f484d,#f7fbfb 28%,#b9c4cb 48%,#fff 67%,#4e5659); border:1px solid #697076; box-shadow:3px 5px 5px #0006,inset 0 0 0 2px #ffffffa8; pointer-events:none; }
+    .link-directory { width:max-content; max-width:100%; margin:0 auto; }
+    .link-directory a, .pending { display:flex; gap:24px; align-items:center; justify-content:space-between; padding:9px 0; min-height:44px; text-decoration:none; color:inherit; font:600 clamp(16px,2.9vw,19px)/1.35 'Gill Sans','Gill Sans MT',Arial,sans-serif; text-transform:uppercase; letter-spacing:.04em; }
+    .link-directory a:hover .label { text-decoration:underline; text-underline-offset:4px; }
+    .link-directory li { list-style:none; }
+    .link-directory ul { margin:0; padding:0; }
+    .label { overflow-wrap:anywhere; }
+    .arrow { flex-shrink:0; font-family:Arial,sans-serif; font-size:23px; font-weight:400; }
+    .pending { color:#646563; }
+    .pending small { font-size:10px; letter-spacing:0; white-space:nowrap; text-transform:none; }
+    .controls { text-align:center; margin:24px 0 0; }
+    button { min-height:44px; padding:10px 18px; color:inherit; border:1px solid #999b95; background:transparent; border-radius:30px; cursor:pointer; font:13px Arial,sans-serif; }
+    .setup-note { max-width:420px; margin:25px auto 0; font-size:13px; line-height:1.5; text-align:center; color:#565955; }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    @media(max-width:480px) { main { padding:26px 20px 32px; } .dial { margin-bottom:30px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="dial" aria-label="Rotary links">
+      <div class="mechanism"></div>
+      <div class="center">
+        <svg class="arch" viewBox="0 0 200 200" aria-hidden="true">
+          <defs><path id="name-arch" d="M 31 93 A 70 70 0 0 1 169 93"/></defs>
+          <text text-anchor="middle"><textPath href="#name-arch" startOffset="50%"></textPath></text>
+        </svg>
+        <h1></h1>
+      </div>
+      <div class="stop" aria-hidden="true"></div>
+    </div>
+    <nav class="link-directory" aria-label="My links"><ul></ul></nav>
+    <div class="controls"><button class="motion-toggle" type="button" aria-pressed="false">Pause rotation</button></div>
+    <p class="setup-note" hidden></p>
+    <p id="dial-status" class="sr-only" aria-live="polite"></p>
+    <noscript>This directory needs JavaScript to load its configured links. Please enable JavaScript.</noscript>
+  </main>
+  <script>
+    // PERSONALIZE HERE. Use your exact public destinations. Leave unknown URLs empty.
+    // This demo uses CSS artwork; see BUILD_BRIEF.md for a photographic treatment.
+    const SITE = {
+      name: ['Your', 'Name'],
+      arch: 'LET’S KEEP IN TOUCH',
+      background: '#f8f7f3',
+      ink: '#171817',
+      autoplay: true,
+      links: [
+        { label:'Instagram', url:'', initials:'IG', color:'#ba3c76', icon:'' },
+        { label:'Newsletter', url:'', initials:'N', color:'#c55c2c', icon:'' },
+        { label:'My business', url:'', initials:'MB', color:'#6c5948', icon:'' },
+        { label:'My shop', url:'', initials:'S', color:'#242724', icon:'' },
+        { label:'Book with me', url:'', initials:'B', color:'#5d7565', icon:'' },
+        { label:'My portfolio', url:'', initials:'P', color:'#726483', icon:'' },
+        { label:'Contact me', url:'', initials:'@', color:'#456a7c', icon:'' }
+      ]
+    };
+
+    function safeDestination(value) {
+      if (typeof value !== 'string' || !value.trim()) return null;
+      try {
+        const url = new URL(value.trim());
+        if (['https:', 'http:'].includes(url.protocol)) return url.username || url.password ? null : url.href;
+        if (url.protocol === 'mailto:' && /^[^\s@?]+@[^\s@?]+\.[^\s@?]+$/.test(url.pathname)) return url.href;
+        if (url.protocol === 'tel:' && /^\+?[\d(). -]+$/.test(url.pathname) && /\d/.test(url.pathname)) return url.href;
+      } catch {}
+      return null;
+    }
+
+    // Same wind/hold/return model as the live rotary. Angles are degrees clockwise.
+    const modulo = value => ((value % 360) + 360) % 360;
+    const ease = value => value < .5 ? 4 * value ** 3 : 1 - (-2 * value + 2) ** 3 / 2;
+    function createDialMotion({ angles, stopAngle = 22, reduced = false, onNavigate }) {
+      let rotation = 0, paused = reduced, engaged = false, selection = null, elapsedAuto = 0, autoIndex = 0;
+      const rest = 450, wind = 560, hold = 180, unwind = 920, cycle = rest + wind + hold + unwind;
+      function automaticPosition() {
+        const turn = modulo(stopAngle - angles[autoIndex]);
+        if (elapsedAuto <= rest) return 0;
+        if (elapsedAuto <= rest + wind) return turn * ease((elapsedAuto - rest) / wind);
+        if (elapsedAuto <= rest + wind + hold) return turn;
+        return turn * (1 - (elapsedAuto - rest - wind - hold) / unwind);
+      }
+      return {
+        get rotation() { return rotation; },
+        get paused() { return paused; },
+        setEngaged(value) { engaged = value; },
+        setPaused(value) { paused = value; },
+        setReduced(value) { reduced = value; paused = value; if (selection && value) selection.duration = 0; },
+        cancelSelection() { selection = null; rotation = 0; elapsedAuto = 0; },
+        select(index, href) {
+          const distance = modulo(stopAngle - angles[index] - rotation);
+          selection = { start:rotation, end:rotation + distance, elapsed:0, duration:reduced ? 0 : 480 + distance * 1.6, href, index };
+        },
+        advance(elapsed) {
+          if (!Number.isFinite(elapsed) || elapsed < 0) return;
+          if (selection) {
+            selection.elapsed += elapsed;
+            const progress = selection.duration === 0 ? 1 : Math.min(selection.elapsed / selection.duration, 1);
+            rotation = selection.start + (selection.end - selection.start) * ease(progress);
+            if (selection.elapsed >= selection.duration + (reduced ? 0 : 180)) {
+              const href = selection.href;
+              autoIndex = selection.index; selection = null; rotation = modulo(rotation);
+              elapsedAuto = rest + wind + hold;
+              onNavigate(href);
+            }
+          } else if (!paused && !engaged) {
+            elapsedAuto += elapsed;
+            while (elapsedAuto >= cycle) { elapsedAuto -= cycle; autoIndex = (autoIndex + 1) % angles.length; }
+            rotation = automaticPosition();
+          }
+        }
+      };
+    }
+
+    const dial = document.querySelector('.dial');
+    const mechanism = document.querySelector('.mechanism');
+    const directory = document.querySelector('.link-directory ul');
+    const toggle = document.querySelector('.motion-toggle');
+    const status = document.querySelector('#dial-status');
+    const note = document.querySelector('.setup-note');
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+    if (SITE.links.length < 4 || SITE.links.length > 9) throw new Error('Use 4–9 circles, or adapt the artwork and layout first.');
+    document.documentElement.style.setProperty('--paper', SITE.background);
+    document.documentElement.style.setProperty('--ink', SITE.ink);
+    document.title = SITE.name.join(' ') + ' · Rotary Directory';
+    SITE.name.forEach(line => {
+      const span = document.createElement('span'); span.textContent = line; document.querySelector('h1').append(span);
+    });
+    document.querySelector('textPath').textContent = SITE.arch;
+    const angles = SITE.links.map((_, i) => -48 - 252 * i / (SITE.links.length - 1));
+    const circles = [], textLinks = [];
+    let missing = 0;
+    SITE.links.forEach((item, i) => {
+      const href = safeDestination(item.url);
+      const circle = document.createElement(href ? 'a' : 'span');
+      circle.className = 'connection';
+      circle.style.setProperty('--x', `${50 + 39 * Math.cos(angles[i] * Math.PI / 180)}%`);
+      circle.style.setProperty('--y', `${50 + 39 * Math.sin(angles[i] * Math.PI / 180)}%`);
+      circle.style.setProperty('--accent', item.color || '#333');
+      circle.setAttribute('aria-label', item.label + (href ? '' : ' — add your link'));
+      circle.title = item.label + (href ? '' : ' — add your link');
+      if (href) circle.href = href;
+      else { circle.setAttribute('aria-disabled', 'true'); missing++; }
+      const initials = document.createElement('span'); initials.textContent = item.initials || item.label.slice(0, 2); initials.setAttribute('aria-hidden', 'true');
+      circle.append(initials);
+      if (item.icon) {
+        const image = document.createElement('img'); image.alt = ''; image.src = item.icon; initials.hidden = true;
+        image.addEventListener('error', () => { image.remove(); initials.hidden = false; }); circle.append(image);
+      }
+      const row = document.createElement('li');
+      const link = document.createElement(href ? 'a' : 'span');
+      if (href) link.href = href; else link.className = 'pending';
+      const label = document.createElement('span'); label.className = 'label'; label.textContent = item.label; link.append(label);
+      const end = document.createElement(href ? 'span' : 'small'); end.textContent = href ? '↗' : 'Add your link';
+      if (href) { end.className = 'arrow'; end.setAttribute('aria-hidden', 'true'); }
+      link.append(end); row.append(link); directory.append(row); mechanism.append(circle);
+      circles.push(circle); textLinks.push(link);
+    });
+    if (missing) { note.hidden = false; note.textContent = `Starter preview: add your exact destinations in the SITE configuration. ${missing} ${missing === 1 ? 'circle is' : 'circles are'} waiting for a link.`; }
+
+    let pointerInside = false, keyboardInside = false, touchHeld = false, previousTime;
+    const motion = createDialMotion({ angles, reduced:reducedMotion.matches, onNavigate:href => {
+      status.textContent = ''; circles.forEach(el => el.classList.remove('is-selected')); window.location.assign(href);
+    }});
+    if (!SITE.autoplay) motion.setPaused(true);
+    function updateToggle() { toggle.setAttribute('aria-pressed', String(motion.paused)); toggle.textContent = motion.paused ? 'Resume rotation' : 'Pause rotation'; }
+    function render() { mechanism.style.transform = `rotate(${motion.rotation}deg)`; }
+    function updateEngagement() { motion.setEngaged(pointerInside || keyboardInside || touchHeld); }
+    function select(event, index) {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.defaultPrevented) return;
+      event.preventDefault();
+      status.textContent = `Opening ${SITE.links[index].label}`;
+      circles.forEach((el, i) => el.classList.toggle('is-selected', index === i));
+      motion.select(index, circles[index].href);
+      if (reducedMotion.matches) { motion.advance(0); render(); }
+    }
+    circles.forEach((circle, i) => { if (circle.href) {
+      circle.addEventListener('click', event => select(event, i));
+      textLinks[i].addEventListener('click', event => select(event, i));
+    }});
+    dial.addEventListener('pointerdown', event => { if (event.pointerType === 'touch') { touchHeld = true; updateEngagement(); } });
+    function releaseTouch(event) { if (event.pointerType === 'touch') { touchHeld = false; updateEngagement(); } }
+    window.addEventListener('pointerup', releaseTouch); window.addEventListener('pointercancel', releaseTouch);
+    dial.addEventListener('pointerenter', event => { if (event.pointerType !== 'touch') pointerInside = true; updateEngagement(); });
+    dial.addEventListener('pointerleave', () => { pointerInside = false; updateEngagement(); });
+    document.querySelector('main').addEventListener('focusin', () => { keyboardInside = document.activeElement.matches(':focus-visible'); updateEngagement(); });
+    document.querySelector('main').addEventListener('focusout', () => requestAnimationFrame(() => { keyboardInside = Boolean(document.activeElement?.matches(':focus-visible')); updateEngagement(); }));
+    toggle.addEventListener('click', () => { motion.setPaused(!motion.paused); updateToggle(); });
+    reducedMotion.addEventListener('change', event => { motion.setReduced(event.matches); if (!SITE.autoplay) motion.setPaused(true); updateToggle(); });
+    document.addEventListener('visibilitychange', () => { previousTime = undefined; });
+    window.addEventListener('pageshow', () => { motion.cancelSelection(); touchHeld = false; pointerInside = false; updateEngagement(); previousTime = undefined; status.textContent = ''; circles.forEach(el => el.classList.remove('is-selected')); render(); });
+    function frame(time) {
+      const elapsed = previousTime === undefined ? 0 : Math.min(time - previousTime, 64); previousTime = time;
+      if (!document.hidden) { motion.advance(elapsed); render(); }
+      requestAnimationFrame(frame);
+    }
+    updateToggle(); render(); requestAnimationFrame(frame);
+  </script>
+</body>
+</html>
